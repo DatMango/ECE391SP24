@@ -1,0 +1,21 @@
+make: Warning: File `Makefile.dep' has modification time 15 s in the future
+gcc  -nostdinc -g  -c -o boot.o boot.S
+gcc  -nostdinc -g  -c -o idt_handler.o idt_handler.S
+gcc  -nostdinc -g  -c -o paging.o paging.S
+gcc  -nostdinc -g  -c -o syscall_handler.o syscall_handler.S
+gcc  -nostdinc -g  -c -o x86_desc.o x86_desc.S
+gcc -Wall -fno-builtin -fno-stack-protector -nostdlib -nostdinc -g  -c -o filesystem.o filesystem.c
+gcc -Wall -fno-builtin -fno-stack-protector -nostdlib -nostdinc -g  -c -o i8259.o i8259.c
+gcc -Wall -fno-builtin -fno-stack-protector -nostdlib -nostdinc -g  -c -o idt.o idt.c
+gcc -Wall -fno-builtin -fno-stack-protector -nostdlib -nostdinc -g  -c -o kernel.o kernel.c
+gcc -Wall -fno-builtin -fno-stack-protector -nostdlib -nostdinc -g  -c -o keyboard.o keyboard.c
+gcc -Wall -fno-builtin -fno-stack-protector -nostdlib -nostdinc -g  -c -o lib.o lib.c
+gcc -Wall -fno-builtin -fno-stack-protector -nostdlib -nostdinc -g  -c -o paging_modifier.o paging_modifier.c
+gcc -Wall -fno-builtin -fno-stack-protector -nostdlib -nostdinc -g  -c -o pit.o pit.c
+gcc -Wall -fno-builtin -fno-stack-protector -nostdlib -nostdinc -g  -c -o rtc.o rtc.c
+gcc -Wall -fno-builtin -fno-stack-protector -nostdlib -nostdinc -g  -c -o syscall_modifier.o syscall_modifier.c
+gcc -Wall -fno-builtin -fno-stack-protector -nostdlib -nostdinc -g  -c -o tests.o tests.c
+rm -f bootimg
+gcc -nostdlib -static boot.o idt_handler.o paging.o syscall_handler.o x86_desc.o filesystem.o i8259.o idt.o kernel.o keyboard.o lib.o paging_modifier.o pit.o rtc.o syscall_modifier.o tests.o -Ttext=0x400000 -o bootimg
+sudo ./debug.sh
+make: warning:  Clock skew detected.  Your build may be incomplete.

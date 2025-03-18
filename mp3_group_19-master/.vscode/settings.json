@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "paging_modifier.h": "c",
+        "lib.h": "c",
+        "paging.h": "c",
+        "types.h": "c",
+        "syscall_modifier.h": "c",
+        "filesystem.h": "c",
+        "keyboard.h": "c",
+        "rtc.h": "c",
+        "syscall_handler.h": "c"
+    }
+}

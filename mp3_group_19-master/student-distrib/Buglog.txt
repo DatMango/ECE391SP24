@@ -1,0 +1,234 @@
+1. Boot loop
+--> The macro we created doesn't allow for comments and caused a bootloop.
+
+2 RTC would cause kernel to crash
+--> Changed the send eoi line to the end (literally "end of interrupt" but
+    we had statements after the send_eoi). In other words, we had the
+    incorrect order in RTC.
+
+3. PIC would cause kernel to crash instantly
+--> Fixed by masking properly in the initialization function for it.
+    Added masking to before the initialization sequence as well as 
+    before enabling irq. This second time for remasking is to remask
+    the port.
+
+4. RTC changing rate wasn't properly implemented, incorrect rates
+--> In change rtc rate, implemented the changing rtc rate inversely.
+    By this, we mean that a higher rate would be faster than a lower
+    rate, changed this by fixing formula in which we calculated rate.
+
+5. Keyboard would cause kernel to produce what happens in RTC interrupt test
+--> Fixed by in our case switch statements, forgot to include the break
+    which would automatically continue to the RTC interrupt case, causing
+    RTC to be executed with the test_interrupts when it shouldn't have.
+
+6. Keyboard was printing capital letters instead of lowercase
+--> Used uppercase when making the array instead of lowercase.
+
+7. Paging causing errors while make
+--> Included wrong file (included x86_desc instead of paging.h) which would
+    delete the .o files.
+
+8. Paging wasn't causing page fault
+--> This was because we created the struct incorrectly (reversed order) so
+    the present bit was the last instead of first which means the bits were
+    being set incorrectly.
+
+9. IDT wouldn't have the right exception if we called an exception that 
+   doesn't exist.
+--> Because we set present bit to 1 for everything, it would call the incorrect
+    exception. Set present bit to 1 for only those that have handlers and set 0
+    for everything else.
+
+
+CHECKPOINT 2:
+1. keyboard scrolling was scrolling horizontally
+--> We were calculating the video memory offset incorrectly. We were multiplying
+    NUM_COLS by the column that we were on instead of the row. This was inside
+    our for loop which iterated through all of the characters displayed on the
+    terminal.
+
+2. terminal read was never reading anything
+--> For terminal read, we were passing in our keyboard count (the number of keys
+    in the keyboard buffer), which was used in a for loop to populate the terminal 
+    buf. However, in our keyboard handler we were clearing keyboard count to 0 every 
+    time we pressed enter. Thus, when terminal read was called, we were passing in 0 
+    bytes to read.
+
+3. keyboard was outputting warning for single quote for the quotation marks. ('"')
+--> Fixed by using the regular quotations but adding a backslash before the double
+    quotation so that it wouldn't have a quotation conflict.
+
+4. filesystem read_dentry_by_name (and other functions with a dentry* input) page
+   fault
+--> We were passing a pointer to a nonexistent dentry. The functions were attempting
+    to access values that didn't exist from the pointer. Fixed by making the dentry
+    pointers into regular dentry variables and passed in the address to the dentry
+    variable using &.
+
+5. Read data wouldn't output the right values
+--> We were mainly using the incorrect calculation method and accessing inccorret 
+    data locations using 4kb. In other words, we would multiply some of our calculations
+    by 4kb as we thought that was what we needed to do to access blocks but because we
+    had bootblock which was 4kb, we could directly access values by not having to
+    multiply. Also in general, we had a few small calculation mistakes.
+
+6. Offset wasn't accounted for properly in read data
+--> Fixed by creating a case for when there is an offset and dealing with the offset.
+    We would then set this offset to 0 after to allow the for loop to access the other
+    cases in which it would check for fourkb blocks to memcpy or if it was less than
+    4kb.
+
+7. Not any major bugs for RTC but there was an alteration that had issues when testing
+   -1 and 0 cases for the change_rtc_rate
+--> Fixed this by returning -1 and 0 instead of returning void so that it would fit
+    the guidelines for the other functions that call it.
+
+
+CHECKPOINT 3: 
+1. Registers were not being popped in syscall handler 
+--> This was messing up the stack and since maintaining this was important for context 
+    switch as well, it would cause a page fault or general protection fault right after 
+    ls. The fix was to pop (that is, add to esp)
+
+2. Registers were being pushed in the wrong order for context switch 
+--> The registers being pushed in reverse caused wrong values to be populated. This was 
+    causing a fault as well and did not allow for the base shell to run 
+
+3. Descriptor privilege level was incorrectly set 
+--> The idt at 0x80 had an incorrect descriptor privilege level of non-user/kernel setting. 
+    This would not allow for any user level code to be in reach and this with the other 
+    issues would result in a page fault and general protection fault. The dpl had to be set 
+    to 3 in this specific case of 0x80 (128). 
+
+4. Directory read was not checking for offset and a buffer overflow was caused 
+--> The directory offset was not reset every time we reach the max number of files and 
+    this would cause a crash. Apart from this, since we used strcpy which looked for a 
+    null character to identify when something was being terminated, it caused an overflow 
+    in the buffer after ready verylargetextwithverylongname.tx since this name is not 
+    null terminated. As a result it was clearing the fd value and setting to 0 instead of
+    2, which does not correspond to the file filetype. When ls was typed within shell, it 
+    would not display any files after verylargetextwithverylongname.tx. This was changed 
+    by checking for offset directory and using strncpy instead. 
+
+5. PCB was not being correctly mapped in kernel memory 
+--> Originally, the PCB was being mapped within execute and the terminal read/write was 
+    not exactly being correctly assigned to fd 0 and fd 1. This would result in incorrect 
+    PCB mapping. This was fixed by creating and init function and was called within kernel.c.
+
+6. syscall read was being called within execute instead of read_data 
+--> This wasn't copying over the EIP bytes correctly and the memory was not being mapped 
+    correctly. This was fixed by change it to read_data instead of syscall read. Instead of
+    buffer, the location was the address in memory. 
+
+7. PCB did not have an array of file descriptors 
+--> The open, close, read, write were not mapped to the PCB. It was using one file descriptor 
+    and was just overwriting it each time. This was changed by having a file descriptor array
+    within the PCB struct and then ensuring that the system call read, write, open, close 
+    modified the appropriate PCB's file descriptor. 
+
+8. partial functionality was not working for sigtest 
+--> Since we were returning 0, it was not exiting to shell but rather page faulting. Once all the 
+    unwritten functions for this checkpoint (that is, getargs, vidmap, set_handler, and sigreturn)
+    were changed, it responded with the correct message and exited back to shell. 
+
+9. page faulting when attempting to halt
+--> we had few minor bugs in our system call halt function after writing it. We forgot to update 
+    our flags variable which indicated if the that pcb was inuse or not. We also needed to fix our
+    execute function to correctly reflect this as well. Needed to be consistent with our struct.
+    Additionally, we also forgot to update the tss in our halt. Thus, the tss was never updated
+    with the parent PID info, failing to go back to the parent process. 
+
+10. incorrectly parsing arguments to execute, faulting when trying to ls in base shell
+--> when we were parsing the arguments to execute, we were copying more desired, resulting in our
+    read_dentry_by_name function to return -1 and exiting out of execute earlier than desired. 
+    turns out we needed to check for ' ', '\n', and '\0' when parsing through the arguments of execute,
+    not just ' '.
+
+11. read_data functionality for if there was offset != 0 would cause a fault
+--> there was multiple reasons why read_data was giving us a fault whenever offset was not 0.
+    first being that our the for loop we had for looping through each block was being modified
+    on each iteration after resetting offset to 0. this was because our condition for the loop
+    also used the same variable. thus we created a temporary variable to keep the condition constant.
+    another bug was that we weren't passing the right variables for memcpy. for the nbytes parameter,
+    we were using something other than the length that was passed in to the read_data function. We
+    were copying the incorrect number of bytes.
+
+12. the second ls after 2 consecutive ls would cause a fault
+--> we weren't being consistent with setting the parent pid and flags for execute and halt functions.
+    after going through both functions and fixing consistency issues, making sure we were setting the
+    parent pid correctly (if base shell set parent equal to current pid.) also making sure that we were
+    setting the flag to 0 when we halt. 
+
+
+CHECKPOINT 4:
+1. When calling cat for a file, it would still print the whole buffer
+--> To fix, in syscall read we obtained the inode number to get the file size. Then we compared the file
+    size to the buffer size and used the lesser of the two to print to terminal. This fixed the next
+    terminal line from printing tabbed over.
+
+2. After fix 1, ls wouldn't be able to be called immediately in terminal.
+--> Cause was because the way we implemented file_size was in syscall read. Fixed this by just moving the
+    code into file_read.
+
+3. Calling commands with arguments after would save values into buffer.
+--> Fixed by having an argument in pcb that tells whether or not there is an argument after things like
+    "cat". This argument forces getargs to return -1.
+
+4. File read and cat printed past the file total size (extra spacing).
+--> Added in calculations that accounts for the file size minus file position being less than the
+    amount of bytes being read.
+
+5. file dentrys were global variables and not struct variables, did not keep track of file position,
+   did not keep track of inode number for each file within struct
+--> we made all of these variables into struct variables and replaced the global variable equivalents
+    with the structs
+
+6. page faulting after entering any invalid command then executing any valid command
+--> after parsing through the arguments in execute, we were setting out pid flag to being used and
+    incrementing our pid counter. however, if this command was invalid, we never set the flag to 0.
+    thus, after executing any command after entering an invalid one, we wouldn't be returning to the
+    right place.
+
+7. part of frame0.txt was not being displayed during fish execution
+--> this was because we were only reading 174 bytes instead of 187. in our file_read function, we
+    were using the wrong method to get the file size. we fixed this by using the file size in our
+    file descriptor struct which we were setting in system call read.
+
+8. second shell line was printing if enter was pressed while fish was executing
+--> this was because we were not disabling terminal read while terminal write was executing, we
+    fixed this by setting the enter flag (which basically enables terminal read to read from buffer)
+    to 0 while terminal write was running.
+
+
+CHECKPOINT 5:
+1. When we switched terminals, none of the contents on the screen would be saved. Additionally when
+   switching screens, sometimes it would appear or disappear.
+--> This was fixed by changing what values we were setting the virtual memory addresses to in order
+    to make sure values were being saved to the right areas (using memcpy) and being re-displayed.
+
+2. When initializing the 3 base shells, they would display or lock the keyboard from being able to
+   type. Additionally, the enable_irq wasn't being called for PIT because of where we were calling
+   the base shells.
+--> This was due to how we were calling execute and where we were calling it. Calling execute before
+    a certain portion of code would cause that part of code to not be run (which we didn't know).
+    To fix the whole issue, we put the initialization of base shells in an if case so that it would
+    only initialize 3 base shells on startup.
+
+3. There were 3 base shells being created on the first terminal.
+--> Issue was that we didn't update the active terminal when initially initializing all three
+    terminals. Fixed by putting into the if statement for the active terminals. However, this
+    would lead to problem 4.
+
+4. Kernel would fault after waiting sometime.
+--> Move active terminal incrementer to the beginning of scheduler as there was a problem of when
+    we were updating it and how the base shells were being initialized.
+
+5. Exiting the base shell more than once would cause a fault.
+--> Fixed by checking for the correct pid instead of the current pid as the current pid would be
+    updated which would make it end the incorrect process (hence why we had issues with the 3rd
+    terminal sometimes).
+
+6. Code page faults or general protection error. (Not fixed)
+--> Debugged so that when we comment out scroll, it would be HIGHLY unlikely to page fault.
+    Problem with scroll.

@@ -1,0 +1,27 @@
+boot.o: boot.S multiboot.h x86_desc.h types.h
+idt_handler.o: idt_handler.S
+paging.o: paging.S paging.h types.h
+syscall_handler.o: syscall_handler.S
+x86_desc.o: x86_desc.S x86_desc.h types.h
+filesystem.o: filesystem.c filesystem.h types.h lib.h
+i8259.o: i8259.c i8259.h types.h lib.h
+idt.o: idt.c idt.h lib.h types.h x86_desc.h idt_handler.h \
+  syscall_handler.h rtc.h i8259.h syscall_modifier.h keyboard.h \
+  filesystem.h paging.h paging_modifier.h
+kernel.o: kernel.c multiboot.h types.h x86_desc.h lib.h i8259.h debug.h \
+  tests.h idt.h rtc.h paging_modifier.h pit.h syscall_modifier.h \
+  keyboard.h filesystem.h paging.h
+keyboard.o: keyboard.c keyboard.h lib.h types.h i8259.h \
+  syscall_modifier.h rtc.h filesystem.h paging.h paging_modifier.h
+lib.o: lib.c lib.h types.h
+paging_modifier.o: paging_modifier.c paging_modifier.h lib.h types.h \
+  paging.h
+pit.o: pit.c pit.h syscall_modifier.h keyboard.h lib.h types.h i8259.h \
+  rtc.h filesystem.h paging.h paging_modifier.h x86_desc.h
+rtc.o: rtc.c rtc.h lib.h types.h i8259.h syscall_modifier.h keyboard.h \
+  filesystem.h paging.h paging_modifier.h
+syscall_modifier.o: syscall_modifier.c syscall_modifier.h keyboard.h \
+  lib.h types.h i8259.h rtc.h filesystem.h paging.h paging_modifier.h \
+  x86_desc.h
+tests.o: tests.c tests.h x86_desc.h types.h lib.h rtc.h i8259.h \
+  syscall_modifier.h keyboard.h filesystem.h paging.h paging_modifier.h
