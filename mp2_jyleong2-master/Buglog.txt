@@ -1,0 +1,121 @@
+Buglog:
+
+!!!! MP2 CP1
+
+- draw_vertical_line() bugs
+Vertical lines were not being drawn correctly when going to the right side of the screen on the
+same line because of the trail left behind by the player. 
+--> Didn't use the right plane offset at first, required proper offset from inputted x (not 0,0 
+from show_x). Also forgot to properly increment address to the proper row.
+
+
+- Status bar
+1. Once the player moved, the status bar would get overwritten by the top 18 pixels of the game.
+--> First fix was to change the screen height to subtract the 18 pixels.
+
+2. Next bug was that there was a single black bar at the bottom, still would get overwritten.
+--> To fix, changed target_img from 0x0000 to 0x05A0 because the status bar is at the bottom
+of the screen which means that it resides above the top part of the screen in addresses. 0x5A0
+is the hexadecimal for 1440, which is 18 * 80 (the height multiplied by the number of addresses
+in a row).
+
+3. First frame when game opened wouldn't have proper displayed values.
+--> Might have accidentally changed line 433 of mazegame.c in which it displays the initial
+counts and timer while debugging. Added in the display_status function to make it display again. 
+
+
+- Text to graphics & Routing to put a graphic image on Status bar (display_status)
+1. When trying to display a string on the status bar, it displayed the middle of the game.
+--> Fixed by using the correct status bar size (originally was using SCROLL_SIZE by accident).
+
+2. Doesn't display strings properly (scattered). Made an incorrect calculation for putting 
+values into the buffer.
+--> Fixed by using raw numbers to put things into the buffer and then found the defined
+variables for which to calculate with.
+
+3. Attempting to get fruit count from maze.c, was giving an undefined reference.
+--> Fixed by putting the getting fruit count towards the top of maze.c.
+
+4. Outputting the string with three variables gives output when not concatenating strings
+properly.
+--> Fixed by just doing it all in one string with sprintf instead of strcpy/strcpy_s.
+
+5. Getting correct spacing so that it is the same as the demo.
+--> Changed amount of spaces between words through comparing mine with the demo using 
+screenshots & qemu window.
+
+6. Wasn't outputting time properly after some modifications (or if I missed it?).
+--> Fixed the time value calculations. Reset total for tick count.
+
+
+- Masking
+1. The player stutters.
+--> Was not fault from masking. Rather was because of status bar, required update to the 
+copy_image function for the size of status bar.
+
+2. When player goes into corner with fruit, the fruit wouldn't disappear if the player stops.
+--> Fixed by whenever player has a direction stop, it will redraw the mask and full block. 
+(Essentially redrawing like if the character was still moving).
+
+
+
+
+
+
+!!!! MP2 CP2
+
+- Tux Drivers
+1. LED wasn't displaying properly.
+--> Had to include in input.c a 32 bit value that would properly display all 4 bytes. 
+Also had to figure out which opcode to use as well as how to create the correct size buffer 
+(accidentally used 4 bytes instead of 6 bytes because didn't account for the opcode as well 
+as which LEDs would be displayed in the writeout to device).
+
+2. Values weren't displaying properly.
+--> The masking I had was incorrect and didn't give the proper bits for the 4 bits for the
+number to be displayed. Same goes for the masking for the decimal.
+
+3. Ioctl helper functions were running twice for LED
+--> Added return before helper functions in the ioctl.
+
+4. Tux buttons incorrect mapping (wouldn't work properly).
+--> Changed values according to active load (utilized bitwise not).
+
+5. Mazegame didn't display time properly.
+--> Fixed header files (not sure why code still worked). Caclulated time properly and made
+sure to call ioctl for setting LEDs in BOTH the IF and ELSE statements. (Mostly just forgot
+to write in the else statement calling ioctl to display to tux).
+
+6. LED Crashes (LED SPAM)
+--> Solved by adding a variable in which checked if the LED was busy.
+
+7. Slight bug with reset button.
+--> At first didn't work, just had to add in acknowledge (MTCP_ACK).
+
+
+- VGA Palette
+1. Color didn't change for level border color.
+--> Color did change, was just a very slight change to the shade. Fixed by using randomized
+numbers for RGB values. Applied randomization to player center as well as status bar.
+
+2. Text wouldn't display properly above player's head and cause weird display values
+(or crash QEMU).
+--> Incorrect calculations in draw_transparent_text at first. Was missing a greater than
+sign for the most part. Mostly was just incorrect calculation.
+
+3. Text didn't display properly onto the screen.
+--> Was calculating 4 plane buffer instead of looping through each value in the buffer.
+
+4. Didn't have transparent colors for text
+--> Because I originally hard coded all the colors, needed to redo and just used a for
+loop to correctly calculate all the transparent colors.
+
+5. Text didn't have offset from top to change distance from top. (Would go past border
+and cause issues).
+--> Added an offset to the values like the demo version so text didn't go past the top
+of the maze game.
+
+6. Fruit text didn't disappear if collected fruit and went to next level within time
+frame of how long fruit text is displayed.
+--> Hard reset at each level the fruit id so that it wouldn't display any text above
+the player.
